@@ -1,0 +1,14 @@
+<div id="ssh-status" class="mb-4">
+    <div class="flex items-center space-x-2 mb-2">
+        {% if connected %}
+        <span class="inline-block w-3 h-3 rounded-full bg-green-500"></span>
+        <span class="text-sm text-gray-700">Připojeno - {{ host }}:{{ port }}</span>
+        {% else %}
+        <span class="inline-block w-3 h-3 rounded-full bg-red-500"></span>
+        <span class="text-sm text-gray-700">Odpojeno</span>
+        {% endif %}
+    </div>
+    {% if error %}
+    <p class="text-red-600 text-sm mt-2">{{ error }}</p>
+    {% endif %}
+</div>

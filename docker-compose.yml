@@ -1,0 +1,26 @@
+services:
+  app:
+    # Pro vývoj použijte build:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Pro produkci použijte image z GHCR:
+    # image: ghcr.io/elvisek2020/web-lidl_gateway_hack:latest
+    container_name: lidl-gateway-hack
+    hostname: lidl-gateway-hack
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=INFO
+      - SESSION_SECRET=change-me-in-production
+    volumes:
+      # Mapování adresáře s binárními soubory
+      - ./binaries:/app/binaries:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

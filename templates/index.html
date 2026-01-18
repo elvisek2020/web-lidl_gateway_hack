@@ -1,0 +1,828 @@
+{% extends "base.html" %}
+
+{% block title %}Lidl Gateway Hack{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Hlavička stránky -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Lidl Gateway Hack</h1>
+        <p class="text-gray-600">Dekódování root hesla a SSH operace na Lidl Silvercrest Smart Home Gateway</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex flex-wrap gap-2 mb-6">
+        <button onclick="showTab('guide')" id="tab-guide" 
+                class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg">
+            Návod
+        </button>
+        <button onclick="showTab('decode')" id="tab-decode" 
+                class="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium rounded-lg">
+            Dekódování
+        </button>
+        <button onclick="showTab('connect')" id="tab-connect" 
+                class="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium rounded-lg">
+            Připojení
+        </button>
+        <button onclick="showTab('ssh-server')" id="tab-ssh-server" 
+                class="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium rounded-lg">
+            SSH server
+        </button>
+        <button onclick="showTab('serial-gateway')" id="tab-serial-gateway" 
+                class="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium rounded-lg">
+            Serial Gateway
+        </button>
+        <button onclick="showTab('static-ip')" id="tab-static-ip" 
+                class="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium rounded-lg">
+            Statická IP adresa
+        </button>
+        <button onclick="showTab('firmware')" id="tab-firmware" 
+                class="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium rounded-lg">
+            Upgrade Firmware
+        </button>
+    </div>
+
+    <!-- Tab 1: Návod -->
+    <div id="content-guide" class="tab-content">
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Návod na připojení a získání dat</h2>
+            <div class="prose max-w-none">
+                <p class="text-gray-700 mb-4">
+                    Pro získání root hesla potřebujete fyzický přístup k zařízení a TTY3v3 serial port.
+                </p>
+                
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <p class="text-yellow-800 font-semibold mb-2">⚠️ Varování</p>
+                    <p class="text-yellow-700 text-sm">
+                        Použijte pouze 3.3V TTL serial port. Připojte pouze Ground (GND), TX a RX. 
+                        <strong>NEPŘIPOJUJTE Vcc</strong>. Připojení přímo k PC serial portu může zařízení poškodit!
+                    </p>
+                </div>
+
+                <ol class="list-decimal list-inside space-y-4 text-gray-700">
+                    <li>
+                        <strong>Připojení serial portu:</strong> Připojte TTY3v3 serial port k J1 konektoru na desce zařízení.
+                    </li>
+                    <li>
+                        <strong>Nastavení serial portu:</strong> Nastavte následující parametry:
+                        <ul class="list-disc list-inside ml-6 mt-2">
+                            <li>Baud rate: <code class="bg-gray-100 px-2 py-1 rounded">38400</code></li>
+                            <li>Data bits: <code class="bg-gray-100 px-2 py-1 rounded">8</code></li>
+                            <li>Parity: <code class="bg-gray-100 px-2 py-1 rounded">None</code></li>
+                            <li>Stop bits: <code class="bg-gray-100 px-2 py-1 rounded">1</code></li>
+                            <li>Flow control: <code class="bg-gray-100 px-2 py-1 rounded">NONE</code></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>Přerušení bootu:</strong> Zapněte zařízení a současně několikrát stiskněte klávesu <code class="bg-gray-100 px-2 py-1 rounded">ESC</code>.
+                    </li>
+                    <li>
+                        <strong>RealTek bootloader:</strong> Měli byste se dostat na prompt <code class="bg-gray-100 px-2 py-1 rounded">&lt;RealTek&gt;</code>.
+                        Stiskněte <code class="bg-gray-100 px-2 py-1 rounded">ENTER</code> pro čerstvý prompt.
+                    </li>
+                    <li>
+                        <strong>Získání KEK:</strong> Zadejte následující příkazy:
+                        <pre class="bg-gray-100 p-3 rounded mt-2"><code>FLR 80000000 401802 16
+DW 80000000 4</code></pre>
+                        Zkopírujte výstup (jeden řádek hex hodnot) - to je váš KEK.
+                    </li>
+                    <li>
+                        <strong>Získání encrypted AUSKEY:</strong> Zadejte následující příkazy:
+                        <pre class="bg-gray-100 p-3 rounded mt-2"><code>FLR 80000000 402002 32
+DW 80000000 8</code></pre>
+                        Zkopírujte výstup (dva řádky hex hodnot) - to je váš encrypted AUSKEY.
+                    </li>
+                </ol>
+
+                <p class="text-gray-700 mt-4">
+                    Nyní můžete použít formulář v záložce "Dekódování" pro dekódování root hesla.
+                </p>
+            </div>
+        </section>
+    </div>
+
+    <!-- Tab 2: Dekódování -->
+    <div id="content-decode" class="tab-content hidden">
+        <!-- Box 1: Formulář pro dekódování -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Dekódování root hesla</h2>
+            <form hx-post="/api/decode"
+                  hx-target="#decode-result"
+                  hx-swap="innerHTML"
+                  class="space-y-4">
+                <div>
+                    <label for="kek" class="block text-sm font-medium text-gray-700 mb-2">
+                        KEK (jeden řádek hex)
+                    </label>
+                    <input type="text" id="kek" name="kek" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg h-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="80000000: 12 34 56 78 ...">
+                </div>
+                <div>
+                    <label for="auskey_line1" class="block text-sm font-medium text-gray-700 mb-2">
+                        Encrypted AUSKEY - řádek 1
+                    </label>
+                    <input type="text" id="auskey_line1" name="auskey_line1" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg h-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="80000000: 12 34 56 78 ...">
+                </div>
+                <div>
+                    <label for="auskey_line2" class="block text-sm font-medium text-gray-700 mb-2">
+                        Encrypted AUSKEY - řádek 2
+                    </label>
+                    <input type="text" id="auskey_line2" name="auskey_line2" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg h-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="80000010: 12 34 56 78 ...">
+                </div>
+                <button type="submit" 
+                        class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                    <span class="htmx-indicator">
+                        <svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </span>
+                    Dekódovat
+                </button>
+            </form>
+        </section>
+
+        <!-- Box 2: Výsledky -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Výsledky</h2>
+            <div id="decode-result">
+                <p class="text-gray-500 text-sm">Výsledky se zobrazí po dekódování.</p>
+            </div>
+        </section>
+    </div>
+
+    <!-- Tab 3: Připojení -->
+    <div id="content-connect" class="tab-content hidden">
+        <!-- Box 1: Připojení k SSH -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Připojení k SSH</h2>
+            <div class="mb-4">
+                <div id="ssh-status" class="flex items-center space-x-2 mb-4">
+                    <span class="inline-block w-3 h-3 rounded-full bg-red-500"></span>
+                    <span class="text-sm text-gray-700">Odpojeno</span>
+                </div>
+            </div>
+            <form hx-post="/api/ssh/connect"
+                  hx-target="#ssh-status"
+                  hx-swap="outerHTML"
+                  hx-on::after-request="if(event.detail.xhr.status === 200) { setTimeout(function() { loadSSHStatus(); }, 100); }"
+                  class="space-y-4">
+                <div>
+                    <label for="ssh_host" class="block text-sm font-medium text-gray-700 mb-2">
+                        IP adresa gateway
+                    </label>
+                    <input type="text" id="ssh_host" name="host" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg h-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="10.104.2.39">
+                </div>
+                <div>
+                    <label for="ssh_port" class="block text-sm font-medium text-gray-700 mb-2">
+                        SSH port
+                    </label>
+                    <input type="number" id="ssh_port" name="port" value="22" min="1" max="65535" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg h-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="ssh_password" class="block text-sm font-medium text-gray-700 mb-2">
+                        Root heslo
+                    </label>
+                    <input type="password" id="ssh_password" name="password" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg h-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Zadejte root heslo">
+                </div>
+                <div class="flex space-x-3">
+                    <button type="submit" 
+                            class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                        <span class="htmx-indicator">
+                            <svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </span>
+                        Připojit
+                    </button>
+                    <button type="button" 
+                            onclick="disconnectSSH()"
+                            class="px-4 py-2 bg-gray-600 text-white font-medium rounded-lg hover:bg-gray-700 transition-colors">
+                        Odpojit
+                    </button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <!-- Tab 4: SSH server -->
+    <div id="content-ssh-server" class="tab-content hidden">
+        <!-- SSH Status Banner -->
+        <div id="ssh-status-banner" class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+            <div id="ssh-status" class="flex items-center space-x-2">
+                <span class="inline-block w-3 h-3 rounded-full bg-red-500"></span>
+                <span class="text-sm text-gray-700">Odpojeno</span>
+            </div>
+        </div>
+
+        <!-- Box 1: Vypnutí SSH monitoru -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Vypnutí SSH monitoru</h2>
+            <p class="text-gray-700 mb-4 text-sm">
+                Vypne SSH monitor, který blokuje přihlášení po neúspěšných pokusech.
+            </p>
+            <button id="btn-disable-monitor"
+                    hx-post="/api/ssh/disable-monitor"
+                    hx-target="#monitor-status"
+                    hx-swap="innerHTML"
+                    hx-on::after-request="if(event.detail.xhr.status === 200) showNotification('SSH monitor byl vypnut', 'success')"
+                    disabled
+                    class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                Vypnout SSH monitor
+            </button>
+            <div id="monitor-status" class="mt-4">
+                <span class="text-sm text-gray-500">✗ Nevykonáno</span>
+            </div>
+        </section>
+
+        <!-- Box 2: Restart zařízení -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Restart zařízení</h2>
+            <p class="text-gray-700 mb-4 text-sm">
+                Restartuje gateway zařízení. SSH session bude automaticky odpojena.
+            </p>
+            <button id="btn-reboot-ssh-server"
+                    onclick="confirmReboot()"
+                    disabled
+                    class="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                Restartovat zařízení
+            </button>
+        </section>
+    </div>
+
+    <!-- Tab 5: Serial Gateway -->
+    <div id="content-serial-gateway" class="tab-content hidden">
+        <!-- SSH Status Banner -->
+        <div id="ssh-status-banner-sg" class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+            <div id="ssh-status-sg" class="flex items-center space-x-2">
+                <span class="inline-block w-3 h-3 rounded-full bg-red-500"></span>
+                <span class="text-sm text-gray-700">Odpojeno</span>
+            </div>
+        </div>
+
+        <!-- Box 1: Nahrání serialgateway.bin -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Nahrání serialgateway.bin</h2>
+            <p class="text-gray-700 mb-2 text-sm">
+                Nahrání binárního souboru na gateway. Cílová cesta: <code class="bg-gray-100 px-2 py-1 rounded">/tuya/serialgateway</code>
+            </p>
+            <form hx-post="/api/ssh/upload-serialgateway"
+                  hx-target="#upload-status"
+                  hx-swap="innerHTML"
+                  hx-on::after-request="showNotification('Soubor byl nahrán', 'success')"
+                  class="space-y-4">
+                <div>
+                    <label for="filename" class="block text-sm font-medium text-gray-700 mb-2">
+                        Vyberte soubor
+                    </label>
+                    <select id="filename" name="filename" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg h-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Načítám soubory...</option>
+                    </select>
+                </div>
+                <button id="btn-upload"
+                        type="submit"
+                        disabled
+                        class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    <span class="htmx-indicator">
+                        <svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </span>
+                    Nahrát serialgateway.bin
+                </button>
+                <div id="upload-status" class="mt-4">
+                    <span class="text-sm text-gray-500">✗ Nevykonáno</span>
+                </div>
+            </form>
+        </section>
+
+        <!-- Box 2: Úprava tuya_start.sh -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Úprava tuya_start.sh</h2>
+            <p class="text-gray-700 mb-4 text-sm">
+                Upraví startovací skript pro spuštění serialgateway při bootu.
+            </p>
+            <button id="btn-update-tuya"
+                    hx-post="/api/ssh/update-tuya-start"
+                    hx-target="#tuya-status"
+                    hx-swap="innerHTML"
+                    hx-on::after-request="if(event.detail.xhr.status === 200) showNotification('tuya_start.sh byl upraven', 'success')"
+                    disabled
+                    class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                Upravit tuya_start.sh
+            </button>
+            <div id="tuya-status" class="mt-4">
+                <span class="text-sm text-gray-500">✗ Nevykonáno</span>
+            </div>
+        </section>
+
+        <!-- Box 3: Restart zařízení -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Restart zařízení</h2>
+            <p class="text-gray-700 mb-4 text-sm">
+                Restartuje gateway zařízení. SSH session bude automaticky odpojena.
+            </p>
+            <button id="btn-reboot-serial-gateway"
+                    onclick="confirmReboot()"
+                    disabled
+                    class="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                Restartovat zařízení
+            </button>
+        </section>
+    </div>
+
+    <!-- Tab 6: Statická IP adresa -->
+    <div id="content-static-ip" class="tab-content hidden">
+        <!-- SSH Status Banner -->
+        <div id="ssh-status-banner-ip" class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+            <div id="ssh-status-ip" class="flex items-center space-x-2">
+                <span class="inline-block w-3 h-3 rounded-full bg-red-500"></span>
+                <span class="text-sm text-gray-700">Odpojeno</span>
+            </div>
+        </div>
+
+        <!-- Box 1: Nastavení statické IP adresy -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Nastavení statické IP adresy</h2>
+            <p class="text-gray-700 mb-2 text-sm">
+                Nastaví statickou IP adresu pro eth1 rozhraní. Pro plnou funkčnost je nutný reboot.
+            </p>
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                <p class="text-yellow-800 text-sm">⚠️ Změna se projeví po rebootu zařízení</p>
+            </div>
+            <form hx-post="/api/ssh/set-static-ip"
+                  hx-target="#ip-status"
+                  hx-swap="innerHTML"
+                  hx-on::after-request="if(event.detail.xhr.status === 200) showNotification('Statická IP byla nastavena', 'success')"
+                  class="space-y-4">
+                <div>
+                    <label for="static_ip" class="block text-sm font-medium text-gray-700 mb-2">
+                        IP adresa
+                    </label>
+                    <input type="text" id="static_ip" name="ip" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg h-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="10.104.2.100">
+                </div>
+                <button id="btn-set-ip"
+                        type="submit"
+                        disabled
+                        class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    <span class="htmx-indicator">
+                        <svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </span>
+                    Nastavit statickou IP
+                </button>
+                <div id="ip-status" class="mt-4">
+                    <span class="text-sm text-gray-500">✗ Nevykonáno</span>
+                </div>
+            </form>
+        </section>
+
+        <!-- Box 2: Restart zařízení -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Restart zařízení</h2>
+            <p class="text-gray-700 mb-4 text-sm">
+                Restartuje gateway zařízení. SSH session bude automaticky odpojena.
+            </p>
+            <button id="btn-reboot-static-ip"
+                    onclick="confirmReboot()"
+                    disabled
+                    class="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                Restartovat zařízení
+            </button>
+        </section>
+    </div>
+
+    <!-- Tab 7: Upgrade firmware -->
+    <div id="content-firmware" class="tab-content hidden">
+        <!-- SSH Status Banner -->
+        <div id="ssh-status-banner-fw" class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+            <div id="ssh-status-fw" class="flex items-center space-x-2">
+                <span class="inline-block w-3 h-3 rounded-full bg-red-500"></span>
+                <span class="text-sm text-gray-700">Odpojeno</span>
+            </div>
+        </div>
+        <!-- Box 1: Návod -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Upgrade TuYa Zigbee modulu TYZS4</h2>
+            <div class="prose max-w-none">
+                <p class="text-gray-700 mb-4">
+                    Zigbee modul (EFR32MG1B232) má od výroby firmware ve verzi 6.5.0.0. 
+                    Tento upgrade umožňuje aktualizaci na verzi 6.7.8.0 pro lepší vlastnosti.
+                </p>
+                
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <p class="text-blue-800 font-semibold mb-2">ℹ️ Informace</p>
+                    <p class="text-blue-700 text-sm">
+                        Upgrade je dobrovolný a nemá vliv na základní funkcionalitu brány. 
+                        Může však zlepšit vlastnosti Zigbee komunikace.
+                    </p>
+                </div>
+
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <p class="text-yellow-800 font-semibold mb-2">⚠️ Varování</p>
+                    <p class="text-yellow-700 text-sm">
+                        Před upgrade je nutné zastavit službu serialgateway. 
+                        Upgrade může trvat několik minut a zařízení se po dokončení automaticky restartuje.
+                    </p>
+                </div>
+
+                <h3 class="text-md font-semibold text-gray-900 mt-6 mb-3">Postup upgrade:</h3>
+                <ol class="list-decimal list-inside space-y-3 text-gray-700">
+                    <li>Zastavte serialgateway službu</li>
+                    <li>Vyberte firmware soubor (.gbl) a EZSP verzi</li>
+                    <li>Nahrajte upgrade soubory (sx.bin a firmware.gbl)</li>
+                    <li>Spusťte upgrade (může trvat několik minut)</li>
+                    <li>Po restartu obnovte serialgateway službu</li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- Box 2: Zastavení serialgateway -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Krok 1: Zastavení serialgateway</h2>
+            <p class="text-gray-700 mb-4 text-sm">
+                Před upgrade je nutné zastavit službu serialgateway, aby nedošlo k problémům během aktualizace.
+            </p>
+            <button id="btn-stop-serialgateway"
+                    hx-post="/api/firmware/stop-serialgateway"
+                    hx-target="#stop-status"
+                    hx-swap="innerHTML"
+                    hx-on::after-request="if(event.detail.xhr.status === 200) showNotification('serialgateway byl zastaven', 'success')"
+                    disabled
+                    class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                Zastavit serialgateway
+            </button>
+            <div id="stop-status" class="mt-4">
+                <span class="text-sm text-gray-500">✗ Nevykonáno</span>
+            </div>
+        </section>
+
+        <!-- Box 3: Nahrání upgrade souborů -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Krok 2: Nahrání upgrade souborů</h2>
+            <p class="text-gray-700 mb-2 text-sm">
+                Nahrajte soubory potřebné pro upgrade: <code class="bg-gray-100 px-2 py-1 rounded">sx.bin</code> a firmware soubor (.gbl).
+            </p>
+            <form hx-post="/api/firmware/upload-files"
+                  hx-target="#upload-firmware-status"
+                  hx-swap="innerHTML"
+                  hx-on::after-request="if(event.detail.xhr.status === 200) showNotification('Soubory byly nahrány', 'success')"
+                  class="space-y-4">
+                <div>
+                    <label for="firmware_file" class="block text-sm font-medium text-gray-700 mb-2">
+                        Vyberte firmware soubor (.gbl)
+                    </label>
+                    <select id="firmware_file" name="firmware_filename" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg h-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Vyberte soubor</option>
+                    </select>
+                </div>
+                <button id="btn-upload-firmware"
+                        type="submit"
+                        disabled
+                        class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    <span class="htmx-indicator">
+                        <svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </span>
+                    Nahrát upgrade soubory
+                </button>
+                <div id="upload-firmware-status" class="mt-4">
+                    <span class="text-sm text-gray-500">✗ Nevykonáno</span>
+                </div>
+            </form>
+        </section>
+
+        <!-- Box 4: Spuštění upgrade -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Krok 3: Spuštění upgrade</h2>
+            <p class="text-gray-700 mb-2 text-sm">
+                Spusťte upgrade firmware Zigbee modulu. Tento proces může trvat několik minut.
+            </p>
+            <div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                <p class="text-red-800 text-sm">⚠️ Po upgrade se zařízení automaticky restartuje!</p>
+            </div>
+            <form hx-post="/api/firmware/upgrade"
+                  hx-target="#upgrade-status"
+                  hx-swap="innerHTML"
+                  hx-on::after-request="if(event.detail.xhr.status === 200) showNotification('Upgrade dokončen, zařízení se restartuje', 'info')"
+                  class="space-y-4">
+                <div>
+                    <label for="upgrade_firmware_file" class="block text-sm font-medium text-gray-700 mb-2">
+                        Firmware soubor
+                    </label>
+                    <select id="upgrade_firmware_file" name="firmware_filename" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg h-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Vyberte soubor</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="ezsp_version" class="block text-sm font-medium text-gray-700 mb-2">
+                        EZSP verze
+                    </label>
+                    <select id="ezsp_version" name="ezsp_version" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg h-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="V7" selected>V7 (výchozí)</option>
+                        <option value="V8">V8</option>
+                    </select>
+                </div>
+                <button id="btn-upgrade-firmware"
+                        type="submit"
+                        hx-on::before-request="if(!confirm('Opravdu chcete spustit upgrade firmware? Zařízení se po dokončení automaticky restartuje. Tento proces může trvat několik minut.')) { event.preventDefault(); }"
+                        disabled
+                        class="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    <span class="htmx-indicator">
+                        <svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </span>
+                    Spustit upgrade firmware
+                </button>
+                <div id="upgrade-status" class="mt-4">
+                    <span class="text-sm text-gray-500">✗ Nevykonáno</span>
+                </div>
+            </form>
+        </section>
+
+        <!-- Box 5: Obnovení serialgateway -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Krok 4: Obnovení serialgateway (po restartu)</h2>
+            <p class="text-gray-700 mb-4 text-sm">
+                Po úspěšném upgrade a restartu zařízení obnovte serialgateway službu.
+            </p>
+            <button id="btn-restore-serialgateway"
+                    hx-post="/api/firmware/restore-serialgateway"
+                    hx-target="#restore-status"
+                    hx-swap="innerHTML"
+                    hx-on::after-request="if(event.detail.xhr.status === 200) showNotification('serialgateway byl obnoven', 'success')"
+                    disabled
+                    class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                Obnovit serialgateway
+            </button>
+            <div id="restore-status" class="mt-4">
+                <span class="text-sm text-gray-500">✗ Nevykonáno</span>
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- Modal pro potvrzení rebootu -->
+<div id="reboot-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+        <div class="mb-4">
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">Potvrzení rebootu</h3>
+            <p class="text-gray-700">Opravdu chcete restartovat zařízení? SSH session bude odpojena.</p>
+        </div>
+        <div class="flex justify-end space-x-3">
+            <button onclick="closeRebootModal()" 
+                    class="px-4 py-2 bg-gray-600 text-white font-medium rounded-lg hover:bg-gray-700 transition-colors">
+                Zrušit
+            </button>
+            <button onclick="performReboot()" 
+                    class="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors">
+                Ano, restartovat
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Tab switching
+function showTab(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('[id^="tab-"]').forEach(el => {
+        el.classList.remove('bg-blue-600', 'text-white');
+        el.classList.add('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
+    });
+    
+    // Show selected tab
+    document.getElementById(`content-${tabName}`).classList.remove('hidden');
+    const tabBtn = document.getElementById(`tab-${tabName}`);
+    tabBtn.classList.remove('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
+    tabBtn.classList.add('bg-blue-600', 'text-white');
+    
+    // Load SSH status for SSH-related tabs
+    const sshTabs = ['connect', 'ssh-server', 'serial-gateway', 'static-ip', 'firmware'];
+    if (sshTabs.includes(tabName)) {
+        loadSSHStatus();
+    }
+    
+    // Load file lists
+    if (tabName === 'serial-gateway') {
+        loadFileList();
+    }
+    
+    if (tabName === 'firmware') {
+        loadFirmwareFileList();
+    }
+}
+
+// SSH status
+function loadSSHStatus() {
+    fetch('/api/ssh/status')
+        .then(r => r.json())
+        .then(data => {
+            // Update all SSH status elements
+            const statusElements = [
+                document.getElementById('ssh-status'),
+                document.getElementById('ssh-status-sg'),
+                document.getElementById('ssh-status-ip'),
+                document.getElementById('ssh-status-fw')
+            ];
+            
+            const statusHtml = data.connected 
+                ? `<span class="inline-block w-3 h-3 rounded-full bg-green-500"></span><span class="text-sm text-gray-700">Připojeno - ${data.host}:${data.port}</span>`
+                : `<span class="inline-block w-3 h-3 rounded-full bg-red-500"></span><span class="text-sm text-gray-700">Odpojeno</span>`;
+            
+            statusElements.forEach(el => {
+                if (el) {
+                    el.innerHTML = statusHtml;
+                }
+            });
+            
+            if (data.connected) {
+                enableSSHButtons();
+            } else {
+                disableSSHButtons();
+            }
+        })
+        .catch(e => console.error('Chyba při načítání SSH statusu:', e));
+}
+
+function enableSSHButtons() {
+    const buttons = [
+        'btn-disable-monitor',
+        'btn-upload',
+        'btn-update-tuya',
+        'btn-set-ip',
+        'btn-reboot-ssh-server',
+        'btn-reboot-serial-gateway',
+        'btn-reboot-static-ip',
+        'btn-stop-serialgateway',
+        'btn-upload-firmware',
+        'btn-upgrade-firmware',
+        'btn-restore-serialgateway'
+    ];
+    
+    buttons.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) btn.disabled = false;
+    });
+}
+
+function disableSSHButtons() {
+    const buttons = [
+        'btn-disable-monitor',
+        'btn-upload',
+        'btn-update-tuya',
+        'btn-set-ip',
+        'btn-reboot-ssh-server',
+        'btn-reboot-serial-gateway',
+        'btn-reboot-static-ip',
+        'btn-stop-serialgateway',
+        'btn-upload-firmware',
+        'btn-upgrade-firmware',
+        'btn-restore-serialgateway'
+    ];
+    
+    buttons.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) btn.disabled = true;
+    });
+}
+
+function disconnectSSH() {
+    fetch('/api/ssh/disconnect', { method: 'POST' })
+        .then(() => {
+            loadSSHStatus();
+            showNotification('SSH odpojeno', 'info');
+        })
+        .catch(e => {
+            showNotification('Chyba při odpojování', 'error');
+            console.error(e);
+        });
+}
+
+// File list
+function loadFileList() {
+    fetch('/api/files/list')
+        .then(r => r.json())
+        .then(data => {
+            const select = document.getElementById('filename');
+            if (select) {
+                select.innerHTML = '<option value="">Vyberte soubor</option>';
+                if (data.files && data.files.length > 0) {
+                    data.files.forEach(file => {
+                        const option = document.createElement('option');
+                        option.value = file;
+                        option.textContent = file;
+                        select.appendChild(option);
+                    });
+                    select.disabled = false;
+                } else {
+                    select.innerHTML = '<option value="">Žádné soubory k dispozici</option>';
+                    select.disabled = true;
+                }
+            }
+        })
+        .catch(e => {
+            console.error('Chyba při načítání souborů:', e);
+            const select = document.getElementById('filename');
+            if (select) {
+                select.innerHTML = '<option value="">Chyba při načítání</option>';
+                select.disabled = true;
+            }
+        });
+}
+
+// Firmware file list (pouze .gbl soubory)
+function loadFirmwareFileList() {
+    fetch('/api/files/list')
+        .then(r => r.json())
+        .then(data => {
+            const selects = ['firmware_file', 'upgrade_firmware_file'];
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (select) {
+                    select.innerHTML = '<option value="">Vyberte firmware soubor</option>';
+                    if (data.files && data.files.length > 0) {
+                        const gblFiles = data.files.filter(file => file.endsWith('.gbl'));
+                        if (gblFiles.length > 0) {
+                            gblFiles.forEach(file => {
+                                const option = document.createElement('option');
+                                option.value = file;
+                                option.textContent = file;
+                                select.appendChild(option);
+                            });
+                            select.disabled = false;
+                        } else {
+                            select.innerHTML = '<option value="">Žádné .gbl soubory k dispozici</option>';
+                            select.disabled = true;
+                        }
+                    } else {
+                        select.innerHTML = '<option value="">Žádné soubory k dispozici</option>';
+                        select.disabled = true;
+                    }
+                }
+            });
+        })
+        .catch(e => {
+            console.error('Chyba při načítání firmware souborů:', e);
+        });
+}
+
+
+// Reboot modal
+function confirmReboot() {
+    document.getElementById('reboot-modal').classList.remove('hidden');
+}
+
+function closeRebootModal() {
+    document.getElementById('reboot-modal').classList.add('hidden');
+}
+
+function performReboot() {
+    fetch('/api/ssh/reboot', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            closeRebootModal();
+            showNotification('Zařízení se restartuje', 'info');
+            disableSSHButtons();
+            setTimeout(() => {
+                loadSSHStatus();
+            }, 2000);
+        })
+        .catch(e => {
+            showNotification('Chyba při rebootu', 'error');
+            console.error(e);
+        });
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    showTab('guide');
+    loadSSHStatus();
+});
+</script>
+{% endblock %}
