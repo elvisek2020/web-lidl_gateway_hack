@@ -16,56 +16,84 @@ Aplikace je navržena jako náhrada za původní Python skripty (`lidl_auskey_de
 ## ✨ Funkce
 
 ### Tab 1: Návod
-- ✅ **Detailní návod** - Krok za krokem instrukce pro připojení k zařízení a získání KEK a AUSKEY
-- ✅ **Varování** - Bezpečnostní upozornění ohledně připojení serial portu
+
+- ✅ **Návod na připojení a získání dat** - Detailní krok za krokem instrukce pro připojení TTY3v3 serial portu k zařízení
+- ✅ **Nastavení serial portu** - Parametry: 38400 baud, 8N1, NO FLOW CONTROL
+- ✅ **Příkazy pro získání KEK** - Instrukce pro RealTek bootloader (`FLR 80000000 401802 16`, `DW 80000000 4`)
+- ✅ **Příkazy pro získání AUSKEY** - Instrukce pro získání encrypted AUSKEY (`FLR 80000000 402002 32`, `DW 80000000 8`)
+- ✅ **Bezpečnostní varování** - Upozornění na použití pouze 3.3V TTL serial portu, nepřipojování Vcc
 
 ### Tab 2: Dekódování
-- ✅ **Dekódování root hesla** - Webový formulář pro dekódování AUSKEY a získání root hesla
-- ✅ **Výsledky** - Zobrazení dekódovaného AUSKEY a root hesla
+
+- ✅ **Formulář pro dekódování** - Tři vstupní pole pro KEK a dva řádky encrypted AUSKEY
+- ✅ **Validace vstupů** - Kontrola hex formátu vstupních dat
+- ✅ **Dekódování AUSKEY** - AES ECB dekódování pomocí dekódovaného KEK
+- ✅ **Zobrazení výsledků** - Zobrazení celého AUSKEY a root hesla (posledních 8 znaků)
+- ✅ **Error handling** - Popisné chybové zprávy při neúspěšném dekódování
 
 ### Tab 3: Připojení
-- ✅ **SSH připojení** - Připojení k gateway zařízení přes SSH s možností změny portu
-- ✅ **Status indikátor** - Zobrazení aktuálního stavu připojení
+
+- ✅ **SSH připojení** - Formulář pro připojení k gateway zařízení (IP adresa, port, root heslo)
+- ✅ **SSH status indikátor** - Zobrazení aktuálního stavu připojení (zelená/červená tečka)
+- ✅ **Zobrazení připojení** - Zobrazení IP adresy a portu při aktivním připojení
+- ✅ **Odpojení SSH** - Tlačítko pro odpojení od zařízení
+- ✅ **Error handling** - Zobrazení chyb při neúspěšném připojení
 
 ### Tab 4: SSH server
-- ✅ **Vypnutí SSH monitoru** - Vypnutí monitoru, který blokuje přihlášení
-- ✅ **Restart zařízení** - Restartování zařízení s potvrzením
+
+- ✅ **SSH status banner** - Zobrazení aktuálního stavu SSH připojení
+- ✅ **Vypnutí SSH monitoru** - Vypnutí monitoru, který blokuje přihlášení po neúspěšných pokusech
+- ✅ **Zálohování původního skriptu** - Automatické vytvoření zálohy `ssh_monitor.original.sh`
+- ✅ **Restart zařízení** - Restartování zařízení s potvrzením přes modal dialog
 
 ### Tab 5: Serial Gateway
-- ✅ **Nahrání souborů** - Nahrání binárních souborů (serialgateway.bin) na zařízení
-- ✅ **Úprava konfigurace** - Úprava startovacích skriptů (tuya_start.sh)
-- ✅ **Restart zařízení** - Restartování zařízení s potvrzením
+
+- ✅ **SSH status banner** - Zobrazení aktuálního stavu SSH připojení
+- ✅ **Nahrání serialgateway.bin** - Výběr souboru z `binaries/` adresáře a nahrání na `/tuya/serialgateway`
+- ✅ **Automatické nastavení oprávnění** - Po nahrání automaticky `chmod 755`
+- ✅ **Úprava tuya_start.sh** - Úprava startovacího skriptu pro spuštění serialgateway při bootu
+- ✅ **Zálohování původního skriptu** - Automatické vytvoření zálohy `tuya_start.original.sh`
+- ✅ **Restart zařízení** - Restartování zařízení s potvrzením přes modal dialog
 
 ### Tab 6: Statická IP adresa
-- ✅ **Statická IP** - Nastavení statické IP adresy pro zařízení
-- ✅ **Restart zařízení** - Restartování zařízení s potvrzením
+
+- ✅ **SSH status banner** - Zobrazení aktuálního stavu SSH připojení
+- ✅ **Nastavení statické IP** - Formulář pro nastavení statické IP adresy na eth1 rozhraní
+- ✅ **Zastavení DHCP klienta** - Automatické zastavení `udhcpc` před nastavením IP
+- ✅ **Varování o rebootu** - Upozornění, že změna se projeví po restartu zařízení
+- ✅ **Restart zařízení** - Restartování zařízení s potvrzením přes modal dialog
 
 ### Tab 7: Upgrade Firmware
-- ✅ **Upgrade TuYa Zigbee modulu** - Upgrade firmware z verze 6.5.0.0 na 6.7.8.0
-- ✅ **Zastavení serialgateway** - Zastavení služby před upgrade
-- ✅ **Nahrání upgrade souborů** - Nahrání sx.bin a firmware souboru
-- ✅ **Spuštění upgrade** - Provedení upgrade s výběrem EZSP verze (V7/V8)
-- ✅ **Obnovení serialgateway** - Obnovení služby po upgrade
+
+- ✅ **SSH status banner** - Zobrazení aktuálního stavu SSH připojení
+- ✅ **Návod k upgrade** - Detailní popis upgrade procesu TuYa Zigbee modulu TYZS4 (6.5.0.0 → 6.7.8.0)
+- ✅ **Zastavení serialgateway** - Přesunutí a zastavení služby před upgrade (`mv /tuya/serialgateway /tuya/serialgateway_norun`)
+- ✅ **Nahrání upgrade souborů** - Automatické nahrání `sx.bin` a vybraného firmware souboru (.gbl) do `/tmp/`
+- ✅ **Spuštění upgrade** - Provedení upgrade s výběrem EZSP verze (V7 nebo V8)
+- ✅ **Automatický reboot** - Po dokončení upgrade automatické restartování zařízení
+- ✅ **Obnovení serialgateway** - Obnovení služby po úspěšném upgrade a restartu
+- ✅ **Potvrzení před upgrade** - Dialog pro potvrzení před spuštěním upgrade procesu
 
 ## 📖 Použití
 
 ### Základní workflow
 
 1. **Dekódování root hesla** (Tab: Návod → Dekódování):
+
    - Přečtěte si návod v tabu "Návod" pro připojení k zařízení
    - Připojte se k zařízení pomocí TTY3v3 serial portu podle návodu
    - Získejte KEK a encrypted AUSKEY pomocí RealTek bootloaderu
    - Přejděte na tab "Dekódování" a vložte hodnoty do formuláře
    - Dekódujte root heslo
-
 2. **SSH operace** (Tab: Připojení → SSH server / Serial Gateway / Statická IP adresa):
+
    - Přejděte na tab "Připojení" a připojte se k zařízení přes SSH pomocí získaného root hesla
    - **SSH server**: Vypněte SSH monitor
    - **Serial Gateway**: Nahrajte serialgateway.bin a upravte tuya_start.sh
    - **Statická IP adresa**: Volitelně nastavte statickou IP adresu
    - Restartujte zařízení (tlačítko restartu je dostupné na všech SSH tabech)
-
 3. **Upgrade Firmware** (Tab: Upgrade Firmware):
+
    - Připojte se k zařízení přes SSH (tab "Připojení")
    - Zastavte serialgateway službu
    - Nahrajte upgrade soubory (sx.bin a firmware .gbl soubor)
@@ -106,46 +134,12 @@ Aplikace je připravena pro spuštění pomocí Docker Compose. Soubor `docker-c
 V `docker-compose.yml` je aktivní `build` sekce (výchozí konfigurace):
 
 **Spuštění:**
-```bash
-docker compose up -d --build
-```
 
-**Rebuild po změnách:**
 ```bash
 docker compose up -d --build
 ```
 
 Aplikace bude dostupná na `http://localhost:8001` (port 8001 je mapován na port 8000 v kontejneru)
-
-#### Pro produkci (image z GHCR)
-
-V `docker-compose.yml` zakomentujte `build` sekci a odkomentujte `image`:
-
-```yaml
-services:
-  app:
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile
-    image: ghcr.io/elvisek2020/web-lidl_gateway_hack:latest
-```
-
-**Spuštění:**
-```bash
-docker compose up -d
-```
-
-**Update:**
-```bash
-docker compose pull
-docker compose up -d
-```
-
-**Poznámka**: Pokud je image **PRIVATE**, je nutné se nejprve autentizovat vůči GHCR:
-
-```bash
-echo $GITHUB_TOKEN | docker login ghcr.io -u elvisek2020 --password-stdin
-```
 
 #### Konfigurace
 
@@ -223,25 +217,33 @@ _docker/
 │   ├── __init__.py
 │   ├── main.py                 # FastAPI aplikace + routy
 │   ├── decode.py               # Logika dekódování AUSKEY
-│   ├── ssh_operations.py       # SSH operace na gateway
+│   ├── ssh_operations.py       # SSH operace na gateway (SSHSession, FirmwareUpgrade)
 │   └── models.py               # Datové modely (Pydantic)
 ├── templates/
-│   ├── base.html               # Base template s Tailwind CSS, HTMX
-│   ├── index.html              # Hlavní stránka s tabs
+│   ├── base.html               # Base template s Tailwind CSS, HTMX, JS
+│   ├── index.html              # Hlavní stránka s 7 taby
 │   └── partials/               # HTMX partials
-│       ├── decode_result.html
-│       └── ssh_status.html
+│       ├── decode_result.html  # Výsledky dekódování
+│       ├── ssh_status.html     # SSH status indikátor
+│       └── firmware_status.html # Status upgrade operací
 ├── static/
 │   ├── css/
-│   │   └── app.css             # Vlastní CSS
+│   │   └── app.css             # Vlastní CSS styly
 │   └── js/
-│       └── app.js               # JavaScript pro notifikace
+│       └── app.js              # JavaScript pro notifikace a utility funkce
+├── images/
+│   └── screen.png              # Screenshot aplikace
+├── binaries/                   # Binární soubory (není v gitu, mapováno jako volume)
+│   ├── serialgateway.bin
+│   ├── sx.bin
+│   └── *.gbl                   # Firmware soubory
 ├── requirements.txt            # Python závislosti
 ├── Dockerfile                  # Docker image definice
 ├── docker-compose.yml          # Docker Compose konfigurace
-├── INSTRUCTION.md              # Detailní instrukce pro vývoj
 └── README.md                   # Tato dokumentace
 ```
+
+**Poznámka**: Adresář `binaries/` není součástí gitu (je v `.gitignore`), ale je mapován jako Docker volume v `docker-compose.yml`. Binární soubory je třeba umístit lokálně do tohoto adresáře před spuštěním aplikace.
 
 ### 🔧 API dokumentace
 
